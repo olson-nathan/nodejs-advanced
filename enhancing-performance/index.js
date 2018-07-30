@@ -3,12 +3,36 @@ const crypto = require('crypto');
 const express = require('express');
 const app = express();
 
+// Web worker threads.
+const { Worker } = require('webworker-threads');
+
 // Routes.
 app.get('/', (req, res) => {
-    // Call pbkdf2.
-    crypto.pbkdf2('a', 'b', 100000, 512, 'sha512', () => {
-        res.send('Hi there');
+    const worker = new Worker(function() {
+        this.onmessage = function() {
+            let counter = 0;
+
+            // Simulate work in worker thread.
+            while (counter < 1e9) {
+                counter++;
+            }
+
+            // Post back to app.
+            postMessage(counter);
+        };
     });
+
+    // Read data from worker.
+    worker.onmessage = function({ data }) {
+        // Console log.
+        console.log({ data });
+
+        // Send.
+        res.send({ data });
+    };
+
+    // Send data to worker.
+    worker.postMessage();
 });
 
 app.get('/fast', (req, res) => {
